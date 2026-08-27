@@ -1,12 +1,12 @@
-name: Build Algoh Support Client (Windows & macOS)
+name: Build Algoh Support Windows (x86_64)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  generate-bridge:
-    uses: ./.github/workflows/bridge.yml
-
   build-RustDeskTempTopMostWindow:
     uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
     strategy:
@@ -23,7 +23,7 @@ jobs:
 
   build-windows:
     name: Windows-x86_64
-    needs: [build-RustDeskTempTopMostWindow, generate-bridge]
+    needs: [build-RustDeskTempTopMostWindow]
     runs-on: windows-2022
     env:
       SCITER_RUST_VERSION: "1.75"
@@ -93,12 +93,6 @@ jobs:
           $VCPKG_ROOT/vcpkg install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
         shell: bash
 
-      - name: Restore bridge files
-        uses: actions/download-artifact@v4
-        with:
-          name: bridge-artifact
-          path: ./
-
       - name: Build rustdesk
         run: |
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
@@ -127,7 +121,7 @@ jobs:
           cp ./libs/portable/target/release/rustdesk-portable-packer.exe ./Algoh-Support.exe 2>/dev/null || cp ./target/release/rustdesk-portable-packer.exe ./Algoh-Support.exe 2>/dev/null || true
           cp ./Algoh-Support.exe ./SignOutput/Algoh-Support-2.0.0-x64.exe 2>/dev/null || true
 
-      - name: Upload Windows Executable
+      - name: Upload Windows Standalone Executable
         uses: actions/upload-artifact@v4
         with:
           name: Algoh-Support-Windows-x64

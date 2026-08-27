@@ -1,4 +1,4 @@
-name: Build Algoh Support Client
+name: Build Algoh Support Full Matrix (Manual)
 
 on:
   workflow_dispatch:
@@ -7,15 +7,11 @@ on:
         description: 'Upload build artifacts'
         type: boolean
         default: true
-  push:
-    branches:
-      - main
-      - master
 
 jobs:
   build-algoh-support:
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
     with:
-      upload-artifact: ${{ inputs.upload-artifact == true || github.event_name == 'push' }}
-      upload-tag: "1.4.9"
+      upload-artifact: ${{ inputs.upload-artifact == true }}
+      upload-tag: "2.0.0"

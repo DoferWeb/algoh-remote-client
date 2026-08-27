@@ -2,9 +2,6 @@ name: Build Desktop Only (Windows & macOS)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   generate-bridge:
