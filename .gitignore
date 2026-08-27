@@ -13,10 +13,9 @@ src/version.rs
 *exe
 *tgz
 cert.pfx
-*.bak
-*png
-*svg
-*jpg
+# *png
+# *svg
+# *jpg
 sciter.dll
 **pdb
 *deb
