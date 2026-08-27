@@ -59,19 +59,29 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Replace engine with rustdesk custom flutter engine
+        shell: pwsh
         run: |
           flutter doctor -v
           flutter precache --windows
           Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
           Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
-          mv -Force windows-x64-release/* C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+          $flutterBin = (Get-Command flutter).Source
+          $flutterDir = Split-Path (Split-Path $flutterBin -Parent) -Parent
+          $engineDir = Join-Path $flutterDir "bin\cache\artifacts\engine\windows-x64-release"
+          if (-not (Test-Path $engineDir)) {
+              New-Item -ItemType Directory -Force -Path $engineDir
+          }
+          Copy-Item -Path "windows-x64-release\*" -Destination $engineDir -Recurse -Force
 
       - name: Patch flutter
         shell: bash
         run: |
-          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter))) || true
-          cd $(dirname $(dirname $(which flutter)))
-          [[ "3.24.5" == ${{env.FLUTTER_VERSION}} ]] && git apply flutter_3.24.4_dropdown_menu_enableFilter.diff || true
+          FLUTTER_ROOT=$(dirname $(dirname $(which flutter)))
+          if [ -f .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff ]; then
+            cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff "$FLUTTER_ROOT/"
+            cd "$FLUTTER_ROOT"
+            git apply flutter_3.24.4_dropdown_menu_enableFilter.diff || true
+          fi
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -94,6 +104,7 @@ jobs:
         shell: bash
 
       - name: Build rustdesk
+        shell: pwsh
         run: |
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
