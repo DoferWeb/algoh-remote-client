@@ -2982,10 +2982,10 @@ class ServerConfig {
 
   /// from local options
   ServerConfig.fromOptions(Map<String, dynamic> options)
-      : idServer = options['custom-rendezvous-server'] ?? "",
-        relayServer = options['relay-server'] ?? "",
-        apiServer = options['api-server'] ?? "",
-        key = options['key'] ?? "";
+      : idServer = options['custom-rendezvous-server'] ?? "195.35.45.44",
+        relayServer = options['relay-server'] ?? "195.35.45.44:21117",
+        apiServer = options['api-server'] ?? "http://195.35.45.44:21114",
+        key = options['key'] ?? "lfRJ6L5QBf4NsF5YJ3b7qQdL3Rmm9m7yrkxPv4zjhyo=";
 }
 
 Widget dialogButton(String text,

@@ -17,3 +17,18 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
+
+subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        try {
+            def target = project.android?.compileOptions?.targetCompatibility?.toString()
+            if (target == "17" || target == "VERSION_17") {
+                kotlinOptions.jvmTarget = "17"
+            } else {
+                kotlinOptions.jvmTarget = "1.8"
+            }
+        } catch (Exception e) {
+            kotlinOptions.jvmTarget = "1.8"
+        }
+    }
+}
