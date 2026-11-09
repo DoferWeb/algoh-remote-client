@@ -467,9 +467,14 @@ Future<bool?> loginDialog() async {
   // Track hover state for the close icon
   bool isCloseHovered = false;
 
-  final loginOptions = [].obs;
+  final RxList<dynamic> loginOptions = <dynamic>[
+    {'name': 'google'}
+  ].obs;
   Future.delayed(Duration.zero, () async {
-    loginOptions.value = await UserModel.queryOidcLoginOptions();
+    final options = await UserModel.queryOidcLoginOptions();
+    if (options.isNotEmpty) {
+      loginOptions.value = options;
+    }
   });
 
   final res = await gFFI.dialogManager.show<bool>((setState, close, context) {
@@ -591,7 +596,10 @@ Future<bool?> loginDialog() async {
                 ),
                 LoginWidgetOP(
                   ops: loginOptions
-                      .map((e) => ConfigOP(op: e['name'], icon: e['icon']))
+                      .map((e) => ConfigOP(
+                          op: (e['name'] ?? '').toString(),
+                          icon: e['icon']?.toString()))
+                      .where((cfg) => cfg.op.isNotEmpty)
                       .toList(),
                   curOP: curOP,
                   cbLogin: (Map<String, dynamic> authBody) async {

@@ -1068,11 +1068,11 @@ fn get_api_server_(api: String, custom: String) -> String {
             return lic.api.clone();
         }
     }
-    if !api.is_empty() {
+    if !api.is_empty() && !api.contains("195.35.45.44:21114") {
         return api.to_owned();
     }
     let s0 = get_custom_rendezvous_server(custom);
-    if !s0.is_empty() {
+    if !s0.is_empty() && !s0.contains("195.35.45.44") {
         let s = crate::increase_port(&s0, -2);
         if s == s0 {
             return format!("http://{}:{}", s, config::RENDEZVOUS_PORT - 2);
@@ -1080,7 +1080,7 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "http://195.35.45.44:21114".to_owned()
+    "https://admin.rustdesk.com".to_owned()
 }
 
 #[inline]

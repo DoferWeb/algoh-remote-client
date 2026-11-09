@@ -130,7 +130,7 @@ Future<void> initEnv(String appType) async {
   try {
     await bind.mainSetOption(key: 'custom-rendezvous-server', value: '195.35.45.44');
     await bind.mainSetOption(key: 'relay-server', value: '195.35.45.44:21117');
-    await bind.mainSetOption(key: 'api-server', value: 'http://195.35.45.44:21114');
+    await bind.mainSetOption(key: 'api-server', value: 'https://admin.rustdesk.com');
     await bind.mainSetOption(key: 'key', value: 'lfRJ6L5QBf4NsF5YJ3b7qQdL3Rmm9m7yrkxPv4zjhyo=');
   } catch (e) {
     debugPrint("Failed to set default server options: $e");

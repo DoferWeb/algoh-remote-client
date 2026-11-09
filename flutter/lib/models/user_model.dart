@@ -221,26 +221,35 @@ class UserModel {
 
   static Future<List<dynamic>> queryOidcLoginOptions() async {
     try {
-      final url = await bind.mainGetApiServer();
-      if (url.trim().isEmpty) return [];
-      final resp = await http.get(Uri.parse('$url/api/login-options'));
+      var url = await bind.mainGetApiServer();
+      if (url.trim().isEmpty || url.contains('195.35.45.44:21114')) {
+        url = 'https://admin.rustdesk.com';
+      }
+      final resp = await http
+          .get(Uri.parse('$url/api/login-options'))
+          .timeout(const Duration(seconds: 4));
       final List<String> ops = [];
       for (final item in jsonDecode(resp.body)) {
         ops.add(item as String);
       }
       for (final item in ops) {
         if (item.startsWith('common-oidc/')) {
-          return jsonDecode(item.substring('common-oidc/'.length));
+          final decoded = jsonDecode(item.substring('common-oidc/'.length));
+          if (decoded is List && decoded.isNotEmpty) {
+            return decoded;
+          }
         }
       }
-      return ops
+      final list = ops
           .where((item) => item.startsWith('oidc/'))
           .map((item) => {'name': item.substring('oidc/'.length)})
           .toList();
+      if (list.isNotEmpty) return list;
+      return [{'name': 'google'}];
     } catch (e) {
       debugPrint(
           "queryOidcLoginOptions: jsonDecode resp body failed: ${e.toString()}");
-      return [];
+      return [{'name': 'google'}];
     }
   }
 }

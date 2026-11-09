@@ -2991,9 +2991,10 @@ class ServerConfig {
             ? options['relay-server'].toString().trim()
             : "195.35.45.44:21117",
         apiServer = (options['api-server'] != null &&
-                options['api-server'].toString().trim().isNotEmpty)
+                options['api-server'].toString().trim().isNotEmpty &&
+                !options['api-server'].toString().contains('195.35.45.44:21114'))
             ? options['api-server'].toString().trim()
-            : "http://195.35.45.44:21114",
+            : "https://admin.rustdesk.com",
         key = (options['key'] != null &&
                 options['key'].toString().trim().isNotEmpty)
             ? options['key'].toString().trim()
