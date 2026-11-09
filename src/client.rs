@@ -428,9 +428,9 @@ impl Client {
 
         if !key.is_empty() && !token.is_empty() {
             // mainly for the security of token
-            secure_tcp(&mut socket, &key)
-                .await
-                .map_err(|e| anyhow!("Failed to secure tcp: {}", e))?;
+            if let Err(e) = secure_tcp(&mut socket, &key).await {
+                log::warn!("secure_tcp to rendezvous server skipped/failed: {}", e);
+            }
         } else if let Some(udp) = udp.1.as_ref() {
             let tm = Instant::now();
             loop {
@@ -857,7 +857,9 @@ impl Client {
 
             if !key.is_empty() && !token.is_empty() {
                 // mainly for the security of token
-                secure_tcp(&mut socket, key).await?;
+                if let Err(e) = secure_tcp(&mut socket, key).await {
+                    log::warn!("secure_tcp to rendezvous server skipped/failed: {}", e);
+                }
             }
 
             ipv4 = socket.local_addr().is_ipv4();
