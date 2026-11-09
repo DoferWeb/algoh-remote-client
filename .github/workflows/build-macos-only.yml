@@ -15,7 +15,7 @@ jobs:
     needs: [generate-bridge]
     runs-on: ${{ matrix.job.os }}
     env:
-      RUST_VERSION: "1.75"
+      RUST_VERSION: "1.81"
       FLUTTER_VERSION: "3.24.5"
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
