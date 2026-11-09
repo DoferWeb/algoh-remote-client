@@ -27,7 +27,7 @@ jobs:
         job:
           - {
               target: aarch64-apple-darwin,
-              os: macos-14,
+              os: macos-latest,
               extra-build-args: "--screencapturekit",
               arch: arm64,
               vcpkg-triplet: arm64-osx,
@@ -99,11 +99,19 @@ jobs:
 
       - name: Build macOS app
         run: |
-          MIN_MACOS_VERSION="12.3"
-          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
-          sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
-          sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
-          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
+          python3 -c "
+          import re
+          v = '12.3'
+          def rep(path, pat, r):
+              try:
+                  with open(path, 'r') as f: c = f.read()
+                  with open(path, 'w') as f: f.write(re.sub(pat, r, c))
+              except Exception as e: print(f'{path}: {e}')
+          rep('build.py', r'MACOSX_DEPLOYMENT_TARGET=[0-9.]+', f'MACOSX_DEPLOYMENT_TARGET={v}')
+          rep('flutter/macos/Podfile', r'platform :osx, .[0-9.]*.', f'platform :osx, \'{v}\'')
+          rep('Cargo.toml', r'osx_minimum_system_version = .[0-9.]*.', f'osx_minimum_system_version = \"{v}\"')
+          rep('flutter/macos/Runner.xcodeproj/project.pbxproj', r'MACOSX_DEPLOYMENT_TARGET = [0-9.]+;', f'MACOSX_DEPLOYMENT_TARGET = {v};')
+          "
           ./build.py --flutter --hwcodec --unix-file-copy-paste ${{ matrix.job.extra-build-args }}
 
       - name: Create DMG

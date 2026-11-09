@@ -403,10 +403,11 @@ def build_deb_from_folder(version, binary_folder):
 
 
 def build_flutter_dmg(version, features):
+    min_target = "12.3" if "screencapturekit" in features else "10.14"
     if not skip_cargo:
-        # set minimum osx build target, now is 10.14, which is the same as the flutter xcode project
+        # set minimum osx build target, now is 10.14 or 12.3 with screencapturekit
         system2(
-            f'MACOSX_DEPLOYMENT_TARGET=10.14 cargo build --locked --features {features} --release')
+            f'MACOSX_DEPLOYMENT_TARGET={min_target} cargo build --locked --features {features} --release')
     # copy dylib
     system2(
         "cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib")
