@@ -1467,15 +1467,17 @@ pub fn rename_exe_cmd(src_exe: &str, path: &str) -> ResultType<String> {
         .to_string_lossy()
         .to_string();
     let app_name = crate::get_app_name().to_lowercase();
-    if src_exe_filename.to_lowercase() == format!("{app_name}.exe") {
-        Ok("".to_owned())
-    } else {
-        Ok(format!(
-            "
-        move /Y \"{path}\\{src_exe_filename}\" \"{path}\\{app_name}.exe\"
-        ",
-        ))
+    let app_name_hyphen = app_name.replace(" ", "-");
+    let mut cmd = String::new();
+    if src_exe_filename.to_lowercase() != format!("{app_name}.exe") {
+        cmd.push_str(&format!(
+            "\nmove /Y \"{path}\\{src_exe_filename}\" \"{path}\\{app_name}.exe\"\n"
+        ));
     }
+    cmd.push_str(&format!(
+        "\ncopy /Y \"{path}\\{app_name}.exe\" \"{path}\\{app_name_hyphen}.exe\"\n"
+    ));
+    Ok(cmd)
 }
 
 #[inline]
@@ -1764,6 +1766,7 @@ pub fn run_before_uninstall() -> ResultType<()> {
 
 fn get_before_uninstall(kill_self: bool) -> String {
     let app_name = crate::get_app_name();
+    let app_name_hyphen = app_name.replace(" ", "-");
     let ext = app_name.to_lowercase();
     let filter = if kill_self {
         "".to_string()
@@ -1773,10 +1776,11 @@ fn get_before_uninstall(kill_self: bool) -> String {
     format!(
         "
     chcp 65001
-    sc stop {app_name}
-    sc delete {app_name}
-    taskkill /F /IM {broker_exe}
-    taskkill /F /IM {app_name}.exe{filter}
+    sc stop \"{app_name}\"
+    sc delete \"{app_name}\"
+    taskkill /F /IM \"{broker_exe}\"
+    taskkill /F /IM \"{app_name}.exe\"{filter}
+    taskkill /F /IM \"{app_name_hyphen}.exe\"{filter}
     reg delete HKEY_CLASSES_ROOT\\.{ext} /f
     reg delete HKEY_CLASSES_ROOT\\{ext} /f
     netsh advfirewall firewall delete rule name=\"{app_name} Service\"
@@ -1948,7 +1952,10 @@ pub fn add_recent_document(path: &str) {
 
 pub fn is_installed() -> bool {
     let (_, _, _, exe) = get_install_info();
-    std::fs::metadata(exe).is_ok()
+    std::fs::metadata(&exe).is_ok() || {
+        let hyphen_exe = exe.replace(" ", "-");
+        std::fs::metadata(&hyphen_exe).is_ok()
+    }
 }
 
 pub fn get_reg(name: &str) -> String {
@@ -3160,18 +3167,21 @@ impl Drop for WakeLock {
 
 pub fn uninstall_service(show_new_window: bool, _: bool) -> bool {
     log::info!("Uninstalling service...");
+    let app_name = crate::get_app_name();
+    let app_name_hyphen = app_name.replace(" ", "-");
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     Config::set_option("stop-service".into(), "Y".into());
     let cmds = format!(
         "
     chcp 65001
-    sc stop {app_name}
-    sc delete {app_name}
+    sc stop \"{app_name}\"
+    sc delete \"{app_name}\"
     if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\"
-    taskkill /F /IM {broker_exe}
-    taskkill /F /IM {app_name}.exe{filter}
+    taskkill /F /IM \"{broker_exe}\"
+    taskkill /F /IM \"{app_name}.exe\"{filter}
+    taskkill /F /IM \"{app_name_hyphen}.exe\"{filter}
     ",
-        app_name = crate::get_app_name(),
+        app_name = app_name,
         broker_exe = WIN_TOPMOST_INJECTED_PROCESS_EXE,
     );
     if let Err(err) = run_cmds(cmds, false, "uninstall") {
@@ -3192,17 +3202,20 @@ pub fn install_service() -> bool {
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     Config::set_option("stop-service".into(), "".into());
     crate::ipc::EXIT_RECV_CLOSE.store(false, Ordering::Relaxed);
+    let app_name = crate::get_app_name();
+    let app_name_hyphen = app_name.replace(" ", "-");
     let cmds = format!(
         "
 chcp 65001
-taskkill /F /IM {app_name}.exe{filter}
+taskkill /F /IM \"{app_name}.exe\"{filter}
+taskkill /F /IM \"{app_name_hyphen}.exe\"{filter}
 cscript \"{tray_shortcut}\"
 copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
 {import_config}
 {create_service}
 if exist \"{tray_shortcut}\" del /f /q \"{tray_shortcut}\"
     ",
-        app_name = crate::get_app_name(),
+        app_name = app_name,
         import_config = get_import_config(&exe),
         create_service = get_create_service(&exe),
     );
@@ -3365,9 +3378,10 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
         format!("{}{}", reg_cmd_main, reg_cmd_msi)
     };
 
+    let app_name_hyphen = app_name.replace(" ", "-");
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     let restore_service_cmd = if is_service_running {
-        format!("sc start {}", &app_name)
+        format!("sc start \"{}\"", &app_name)
     } else {
         "".to_owned()
     };
@@ -3399,8 +3413,9 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
     let cmds = format!(
         "
 chcp 65001
-sc stop {app_name}
-taskkill /F /IM {app_name}.exe{filter}
+sc stop \"{app_name}\"
+taskkill /F /IM \"{app_name}.exe\"{filter}
+taskkill /F /IM \"{app_name_hyphen}.exe\"{filter}
 {reg_cmd}
 {copy_exe}
 {rename_exe}
@@ -3688,12 +3703,12 @@ fn get_import_config(exe: &str) -> String {
         return "".to_string();
     }
     format!("
-sc stop {app_name}
-sc delete {app_name}
-sc create {app_name} binpath= \"\\\"{exe}\\\" --import-config \\\"{config_path}\\\"\" start= auto DisplayName= \"{app_name} Service\"
-sc start {app_name}
-sc stop {app_name}
-sc delete {app_name}
+sc stop \"{app_name}\"
+sc delete \"{app_name}\"
+sc create \"{app_name}\" binpath= \"\\\"{exe}\\\" --import-config \\\"{config_path}\\\"\" start= auto DisplayName= \"{app_name} Service\"
+sc start \"{app_name}\"
+sc stop \"{app_name}\"
+sc delete \"{app_name}\"
 ",
     app_name = crate::get_app_name(),
     config_path=Config::file().to_str().unwrap_or(""),
@@ -3711,8 +3726,8 @@ if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{ap
 ", app_name = crate::get_app_name())
     } else {
         format!("
-sc create {app_name} binpath= \"\\\"{exe}\\\" --service\" start= auto DisplayName= \"{app_name} Service\"
-sc start {app_name}
+sc create \"{app_name}\" binpath= \"\\\"{exe}\\\" --service\" start= auto DisplayName= \"{app_name} Service\"
+sc start \"{app_name}\"
 ",
     app_name = crate::get_app_name())
     }
@@ -3955,6 +3970,7 @@ pub fn try_kill_rustdesk_main_window_process() -> ResultType<()> {
     // Kill rustdesk.exe without extra arg, should only be called by --server
     // We can find the exact process which occupies the ipc, see more from https://github.com/winsiderss/systeminformer
     let app_name = crate::get_app_name().to_lowercase();
+    let app_name_hyphen = app_name.replace(" ", "-");
     log::info!("try kill main window process");
     use hbb_common::sysinfo::System;
     let mut sys = System::new();
@@ -3970,7 +3986,11 @@ pub fn try_kill_rustdesk_main_window_process() -> ResultType<()> {
     for (_, p) in sys.processes().iter() {
         let p_name = p.name().to_lowercase();
         // name equal
-        if !(p_name == app_name || p_name == app_name.clone() + ".exe") {
+        if !(p_name == app_name
+            || p_name == app_name.clone() + ".exe"
+            || p_name == app_name_hyphen
+            || p_name == app_name_hyphen.clone() + ".exe")
+        {
             continue;
         }
         // arg more than 1
